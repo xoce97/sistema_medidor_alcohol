@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'medidor',
 ]
 
 MIDDLEWARE = [
@@ -65,9 +66,6 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = 'alcoholimetro2025.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
