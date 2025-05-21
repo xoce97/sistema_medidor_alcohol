@@ -2,21 +2,36 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}Iniciar Sesión{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <h2 class="text-center mb-4">Iniciar Sesión</h2>
-        <form id="login-form" method="post">
-            {% csrf_token %}
-            {{ form|crispy }}
-            <button type="submit" class="btn btn-primary w-100 mt-3">Ingresar</button>
-        </form>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Iniciar Sesión</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Usuario</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Ingresar</button>
+                    </form>
+                    
+                    {% if error %}
+                    <div class="alert alert-danger mt-3">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %}
-
-{% block page_js %}
-<script src="{% static 'js/auth.js' %}"></script>
 {% endblock %}

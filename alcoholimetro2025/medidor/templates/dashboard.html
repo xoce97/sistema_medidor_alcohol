@@ -2,20 +2,74 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}Mi Panel{% endblock %}
-
-{% block extra_css %}
-<link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
-{% endblock %}
-
 {% block content %}
-<!-- Contenido igual que antes -->
-{% endblock %}
-
-{% block page_js %}
-<script>
-    const muestrasData = JSON.parse('{{ muestras_json|escapejs }}');
-    console.log(muestrasData);  // Verifica en consola del navegador
-</script>
-<script src="{% static 'js/dashboard.js' %}"></script>
+<div class="container mt-4">
+    <!-- Barra superior con título y botón de logout -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Panel de Usuario</h2>
+        <!-- Versión con formulario POST -->
+        <form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
+    </button>
+        </form>
+    </div>
+    <!-- Tarjeta de Bienvenida -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="bi bi-person-circle fs-1 text-primary"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="card-title">Bienvenido, {{ request.user.first_name }}</h5>
+                    <p class="card-text text-muted">
+                        <i class="bi bi-building"></i> Departamento: {{ request.user.departamento }}
+                        <br>
+                        <i class="bi bi-id-card"></i> ID: {{ request.user.identificacion }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Historial de Muestras -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Historial Reciente</h5>
+        </div>
+        <div class="card-body">
+            {% if muestras %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="bi bi-calendar"></i> Fecha</th>
+                            <th><i class="bi bi-speedometer"></i> Valor</th>
+                            <th><i class="bi bi-droplet"></i> Alcohol (ppm)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for muestra in muestras %}
+                        <tr>
+                            <td>{{ muestra.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ muestra.valor_analogico }}</td>
+                            <td>
+                                <span class="badge bg-{% if muestra.alcohol_ppm > 50 %}danger{% else %}success{% endif %}">
+                                    {{ muestra.alcohol_ppm }} ppm
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle"></i> No hay muestras registradas
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}

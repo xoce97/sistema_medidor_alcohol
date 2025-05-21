@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt,csrf_protect
 from django.http import JsonResponse
 import json
 from .models import Empleado, MuestraAlcohol
@@ -12,20 +12,19 @@ def inicio_view(request):
     return render(request, 'inicio.html')
 
 # Vista de login
+
 def login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('dashboard')
-    else:
-        form = LoginForm()
-    
-    return render(request, 'login.html', {'form': form})
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('dashboard')
+        else:
+            return render(request, 'login.html', {'error': 'Usuario o contraseña incorrectos'})
+    return render(request, 'login.html')
+
 # Vista de logout
 def logout_view(request):
     logout(request)
