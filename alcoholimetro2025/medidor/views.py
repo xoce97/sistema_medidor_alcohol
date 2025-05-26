@@ -7,6 +7,8 @@ import json
 from .models import Empleado, MuestraAlcohol
 from .forms import LoginForm  # Asegúrate de importar tu formulario
 
+from django.core.cache import cache
+
 # Vista de inicio (pública)
 def inicio_view(request):
     return render(request, 'inicio.html')
@@ -31,7 +33,7 @@ def logout_view(request):
     return redirect('inicio')
 
 # Dashboard (protegido)
-#@login_required
+@login_required
 def dashboard_view(request):
     muestras = MuestraAlcohol.objects.filter(empleado=request.user).order_by('-fecha')
     return render(request, 'dashboard.html', {'muestras': muestras})
@@ -53,3 +55,19 @@ def recibir_datos_api(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def control_medicion(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        cache.set(f'medicion_activa_{request.user.id}', action == 'iniciar', timeout=None)
+        
+        # Opcional: Enviar comando directo a la ESP32 (ej. via HTTP)
+        return JsonResponse({'status': f'Medición {action}da', 'activa': cache.get(f'medicion_activa_{request.user.id}')})
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+@login_required
+def estado_medicion(request):
+    return JsonResponse({'activa': cache.get(f'medicion_activa_{request.user.id}', False)})

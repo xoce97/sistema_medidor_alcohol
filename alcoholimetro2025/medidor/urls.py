@@ -4,7 +4,9 @@ from .views import (
     login_view,
     logout_view,
     dashboard_view,
-    recibir_datos_api
+    recibir_datos_api,
+    control_medicion,
+    estado_medicion,
 )
 
 urlpatterns = [
@@ -13,4 +15,6 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('dashboard/', dashboard_view, name='dashboard'),
     path('api/muestras/', recibir_datos_api, name='api_muestras'),
+    path('control-medicion/', control_medicion, name='control_medicion'),
+    path('estado-medicion/', estado_medicion, name='estado_medicion'),
 ]
