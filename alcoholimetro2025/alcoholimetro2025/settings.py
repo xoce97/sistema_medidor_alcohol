@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+kj9cesk(!m^fnpr-1&xxn&=66sx15duxgopxy)6issw7o_t=l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.72','192.168.1.109','localhost','127.0.0.1']
 
 
 # Application definition
@@ -125,3 +125,9 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'medidor.Empleado'  # Indica a Django que use este modelo para autenticación
+
+ #Redirección después de login
+LOGIN_REDIRECT_URL = 'dashboard'  # Usa el nombre de tu URL del dashboard
+
+# Redirección después de logout
+LOGOUT_REDIRECT_URL = 'inicio'  # Usa el nombre de tu URL de inicio

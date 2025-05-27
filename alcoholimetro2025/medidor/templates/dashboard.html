@@ -1,46 +1,38 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
-
-{% block extra_js %}
-    <script src="{% static 'js/controlMedicion.js' %}"></script>
-{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <!-- Barra superior con título y botón de logout -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Panel de Usuario</h2>
-        <!-- Versión con formulario POST -->
+        <h2>Dashboard de Monitoreo</h2>
         <form action="{% url 'logout' %}" method="post">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-danger">
-        <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-    </button>
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
+            </button>
         </form>
     </div>
-    <!-- Tarjeta de Bienvenida -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex align-items-center">
-                <div class="flex-shrink-0">
-                    <i class="bi bi-person-circle fs-1 text-primary"></i>
-                </div>
-                <div class="flex-grow-1 ms-3">
-                    <h5 class="card-title">Bienvenido, {{ request.user.first_name }}</h5>
-                    <p class="card-text text-muted">
-                        <i class="bi bi-building"></i> Departamento: {{ request.user.departamento }}
-                        <br>
-                        <i class="bi bi-id-card"></i> ID: {{ request.user.identificacion }}
-                    </p>
-                </div>
-            </div>
-        </div>
+
+    <!-- Controles de medición -->
+    <div class="btn-group mb-4" role="group">
+        <button id="btnIniciar" class="btn btn-success {% if medicion_activa %}disabled{% endif %}">
+            <i class="bi bi-play-fill"></i> Iniciar Medición
+        </button>
+        <button id="btnDetener" class="btn btn-danger {% if not medicion_activa %}disabled{% endif %}">
+            <i class="bi bi-stop-fill"></i> Detener
+        </button>
     </div>
-    <!-- Historial de Muestras -->
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Historial Reciente</h5>
+
+    <!-- Estado de medición -->
+    <div id="estadoMedicion" class="alert {% if medicion_activa %}alert-success{% else %}alert-secondary{% endif %} mb-4">
+        Estado: {% if medicion_activa %}Activa{% else %}Inactiva{% endif %}
+    </div>
+
+    <!-- Historial de mediciones -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Historial de Mediciones</h5>
         </div>
         <div class="card-body">
             {% if muestras %}
@@ -60,7 +52,7 @@
                             <td>{{ muestra.valor_analogico }}</td>
                             <td>
                                 <span class="badge bg-{% if muestra.alcohol_ppm > 50 %}danger{% else %}success{% endif %}">
-                                    {{ muestra.alcohol_ppm }} ppm
+                                    {{ muestra.alcohol_ppm|floatformat:2 }} ppm
                                 </span>
                             </td>
                         </tr>
@@ -70,28 +62,14 @@
             </div>
             {% else %}
             <div class="alert alert-info mb-0">
-                <i class="bi bi-info-circle"></i> No hay muestras registradas
+                <i class="bi bi-info-circle"></i> No hay mediciones registradas
             </div>
             {% endif %}
         </div>
     </div>
+</div>
+{% endblock %}
 
-</div>
-<!-- En tu dashboard.html -->
-<div class="card mt-4">
-    <div class="card-header">
-        <h5>Control de Mediciones</h5>
-    </div>
-    <div class="card-body">
-        <button id="btnIniciar" class="btn btn-success">
-            <i class="fas fa-play"></i> Iniciar
-        </button>
-        <button id="btnDetener" class="btn btn-danger" disabled>
-            <i class="fas fa-stop"></i> Detener
-        </button>
-        <div id="estado" class="mt-2">
-            <span class="badge bg-secondary">Inactivo</span>
-        </div>
-    </div>
-</div>
+{% block extra_js %}
+<script src="{% static 'js/controlMedicion.js' %}"></script>
 {% endblock %}

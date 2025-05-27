@@ -20,6 +20,12 @@ class Empleado(AbstractUser):
 
     def __str__(self):
         return f"{self.nombre} ({self.identificacion})"
+    
+     # Método adicional para obtener el ID de empleado consistente
+    @property
+    def empleado_id(self):
+        """Devuelve la identificación como string o el ID según prefieras"""
+        return str(self.identificacion)  # o str(self.id) si prefieres usar el ID numérico
 
 class MuestraAlcohol(models.Model):
     empleado = models.ForeignKey(Empleado,on_delete=models.CASCADE,related_name='muestras', to_field='identificacion'  # ¡Clave para mantener relaciones existentes!
@@ -36,3 +42,4 @@ class MuestraAlcohol(models.Model):
 
     def __str__(self):
         return f"{self.empleado.identificacion} - {self.alcohol_ppm}ppm ({self.fecha.date()})"
+    
