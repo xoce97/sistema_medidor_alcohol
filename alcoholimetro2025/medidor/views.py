@@ -40,48 +40,19 @@ def dashboard_view(request):
         'medicion_activa': cache.get(f'medicion_activa_{request.user.id}', False)
     })
 
-@csrf_exempt
-@require_POST
-def control_medicion(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'No autenticado'}, status=401)
-    
-    action = request.POST.get('action')
-    user = request.user
-    
-    # Actualizar estado en cache
-    cache.set(f'medicion_activa_{user.id}', action == 'iniciar', timeout=None)
-    
-    # Notificar a la ESP32 solo al iniciar
-    if action == 'iniciar':
-        try:
-            response = requests.post(
-                "http://192.168.1.109/control-medicion",
-                json={
-                    'action': 'iniciar',
-                    'empleado_id': user.id,
-                    'nombre': user.get_full_name(),
-                    'identificacion': user.identificacion
-                },
-                timeout=2
-            )
-            return JsonResponse({
-                'status': 'Medición iniciada',
-                'esp32_response': response.json()
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status': 'Medición iniciada (ESP32 no notificada)',
-                'warning': str(e)
-            }, status=200)
-    
-    return JsonResponse({'status': 'Medición detenida'})
 
 @csrf_exempt
 @require_POST
 def recibir_datos(request):
     try:
         data = json.loads(request.body)
+        
+        # Validación básica
+        required_fields = ['empleado_id', 'valor_analogico', 'voltaje', 'alcohol_ppm']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({'status': 'error', 'message': f'Falta el campo {field}'}, status=400)
+
         empleado = Empleado.objects.get(id=data['empleado_id'])
         
         MuestraAlcohol.objects.create(
@@ -92,5 +63,64 @@ def recibir_datos(request):
         )
         
         return JsonResponse({'status': 'success'})
+    except Empleado.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Empleado no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@csrf_exempt
+def estado_medicion_view(request):
+    empleado_id = request.GET.get('empleado_id')
+    if not empleado_id:
+        return JsonResponse({'activa': False})
+
+    estado = cache.get(f'medicion_activa_{empleado_id}', False)
+    return JsonResponse({'activa': estado})
+
+@csrf_exempt
+@require_POST
+def control_medicion(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    
+    action = request.POST.get('action')
+    user = request.user
+
+    # Actualizar estado en cache
+    cache.set(f'medicion_activa_{user.id}', action == 'iniciar', timeout=None)
+
+    if action == 'iniciar':
+        try:
+            response = requests.post(
+                "http://192.168.1.109/control-medicion",  # asegúrate que sea la IP actual de tu ESP32
+                json={
+                    'action': 'iniciar',
+                    'empleado_id': user.id,
+                    'nombre': user.get_full_name(),
+                    'identificacion': user.identificacion
+                },
+                timeout=2
+            )
+
+            # Intentar parsear JSON
+            try:
+                esp32_response = response.json()
+            except ValueError:
+                esp32_response = {
+                    'warning': 'Respuesta no válida de ESP32',
+                    'raw': response.text  # Esto te ayudará a depurar
+                }
+
+            return JsonResponse({
+                'status': 'Medición iniciada',
+                'esp32_response': esp32_response
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'status': 'Medición iniciada (ESP32 no notificada)',
+                'warning': str(e)
+            }, status=200)
+
+    return JsonResponse({'status': 'Medición detenida'})

@@ -6,7 +6,8 @@ from .views import (
     dashboard_view,
     recibir_datos,
     control_medicion,
-    CustomLoginView
+    CustomLoginView,
+    estado_medicion_view
 )
 
 urlpatterns = [
@@ -16,5 +17,6 @@ urlpatterns = [
     path('dashboard/', dashboard_view, name='dashboard'),
     path('control-medicion/', control_medicion, name='control_medicion'),
     path('api/recibir-datos/', recibir_datos, name='recibir_datos'),
+    path("api/estado-medicion/", estado_medicion_view, name="estado_medicion"),
    
 ]
