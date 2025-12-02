@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (response.ok) {
-                window.location.href = '/dashboard/';  // Redirigir al dashboard
+                window.location.href = '/index/';  // Redirigir al index
             } else {
                 const errors = await response.json();
                 showError(errorDiv, Object.values(errors).join(' '));

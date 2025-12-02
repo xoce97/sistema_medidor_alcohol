@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard Administrativo - AHP</h2>
+        <div>
+            <span class="badge bg-danger">ADMIN</span>
+            <a href="{% url 'reporte_riesgos' %}" class="btn btn-sm btn-secondary ms-2">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de estadísticas generales -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-lg-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Empleados</h6>
+                    <h3 class="text-primary">{{ stats.total_empleados }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Riesgo Promedio</h6>
+                    <h3 class="text-warning">{{ stats.promedio_puntuacion }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">En Riesgo Crítico</h6>
+                    <h3 class="text-danger">{{ stats.conteo_por_riesgo.CRITICO }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">En Riesgo Bajo</h6>
+                    <h3 class="text-success">{{ stats.conteo_por_riesgo.BAJO }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Panel de selección de empleados -->
+        <div class="col-lg-3">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Empleados</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                        {% for cal in empleados_list %}
+                        <a href="?empleado_id={{ cal.empleado.identificacion }}" 
+                           class="list-group-item list-group-item-action {% if empleado_seleccionado.id == cal.empleado.id %}active{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">{{ cal.empleado.identificacion }}</h6>
+                                    <small class="text-muted">{{ cal.empleado.nombre|truncatewords:3 }}</small>
+                                </div>
+                                <span class="badge bg-{{ cal.color_riesgo }}">
+                                    {{ cal.puntuacion_total|floatformat:0 }}%
+                                </span>
+                            </div>
+                            <small class="text-muted d-block">{{ cal.get_nivel_riesgo_display }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-inbox"></i> Sin empleados analizados
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de detalles del empleado -->
+        <div class="col-lg-9">
+            {% if empleado_seleccionado and calificacion %}
+                <!-- Información del empleado -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4>{{ empleado_seleccionado.nombre }}</h4>
+                                <p class="text-muted mb-2">ID: <strong>{{ empleado_seleccionado.identificacion }}</strong></p>
+                                <div class="row mt-3">
+                                    <div class="col-sm-6">
+                                        <small class="text-muted">Departamento</small>
+                                        <p><strong>{{ empleado_seleccionado.departamento }}</strong></p>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted">Email</small>
+                                        <p><strong>{{ empleado_seleccionado.email }}</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Puntuación AHP</h6>
+                                <div class="mb-2">
+                                    <span class="display-4 text-{{ calificacion.color_riesgo }}">
+                                        {{ calificacion.puntuacion_total }}%
+                                    </span>
+                                </div>
+                                <h5>
+                                    <span class="badge bg-{{ calificacion.color_riesgo }} fs-6">
+                                        {{ calificacion.get_nivel_riesgo_display }}
+                                    </span>
+                                </h5>
+                                <div class="progress mt-3" style="height: 5px;">
+                                    <div class="progress-bar bg-{{ calificacion.color_riesgo }}" 
+                                         style="width: {{ calificacion.puntuacion_total }}%;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Métricas -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6 class="text-muted">Promedio PPM</h6>
+                                <h4>{{ calificacion.promedio_alcohol_ppm }}</h4>
+                                <small class="text-muted">ppm</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6 class="text-muted">Máximo PPM</h6>
+                                <h4 class="text-danger">{{ calificacion.maximo_alcohol_ppm }}</h4>
+                                <small class="text-muted">ppm</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6 class="text-muted">Frecuencia</h6>
+                                <h4>{{ calificacion.frecuencia_mediciones }}</h4>
+                                <small class="text-muted">muestras/día</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6 class="text-muted">Total Muestras</h6>
+                                <h4>{{ calificacion.numero_muestras }}</h4>
+                                <small class="text-muted">mediciones</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de mediciones -->
+                {% if chart_data %}
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up"></i> Evolución - Últimos 30 días</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="alcoholChart"></canvas>
+                    </div>
+                </div>
+
+                <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+                <script>
+                    const ctx = document.getElementById('alcoholChart').getContext('2d');
+                    const maxPpm = {{ chart_data.max_ppm }};
+                    const promedioPpm = {{ chart_data.promedio_ppm }};
+                    
+                    const chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: {{ chart_data.labels|safe }},
+                            datasets: [
+                                {
+                                    label: 'Nivel de Alcohol (ppm)',
+                                    data: {{ chart_data.datos|safe }},
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6,
+                                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                                },
+                                {
+                                    label: 'Promedio',
+                                    data: Array({{ chart_data.labels|length }}).fill(promedioPpm),
+                                    borderColor: 'rgba(255, 159, 64, 1)',
+                                    borderDash: [5, 5],
+                                    fill: false,
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                },
+                                {
+                                    label: 'Máximo',
+                                    data: Array({{ chart_data.labels|length }}).fill(maxPpm),
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderDash: [5, 5],
+                                    fill: false,
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    min: 0,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + ' ppm';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                </script>
+                {% endif %}
+
+                <!-- Últimas mediciones -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Últimas Mediciones</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if muestras_datos %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Valor Analógico</th>
+                                        <th>Voltaje</th>
+                                        <th>Alcohol (ppm)</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for muestra in muestras_datos %}
+                                    <tr>
+                                        <td><small>{{ muestra.fecha|date:"d/m/Y H:i" }}</small></td>
+                                        <td>{{ muestra.valor_analogico }}</td>
+                                        <td>{{ muestra.voltaje }}V</td>
+                                        <td>
+                                            <span class="badge bg-{% if muestra.alcohol_ppm > 80 %}danger{% elif muestra.alcohol_ppm > 50 %}warning{% else %}success{% endif %}">
+                                                {{ muestra.alcohol_ppm }} ppm
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if muestra.alcohol_ppm > 80 %}
+                                                <span class="badge bg-danger">Crítico</span>
+                                            {% elif muestra.alcohol_ppm > 50 %}
+                                                <span class="badge bg-warning text-dark">Elevado</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Normal</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info m-3 mb-0">
+                            <i class="bi bi-info-circle"></i> No hay mediciones disponibles
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                <!-- Mensaje cuando no hay empleado seleccionado -->
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-cursor-text" style="font-size: 3rem; color: #ccc;"></i>
+                        <h4 class="text-muted mt-3">Selecciona un empleado</h4>
+                        <p class="text-muted">Elige un empleado de la lista para ver su análisis detallado</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .list-group-item.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .badge {
+        padding: 0.5em 0.75em;
+    }
+</style>
+{% endblock %}
