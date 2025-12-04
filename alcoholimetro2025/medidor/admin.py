@@ -7,12 +7,14 @@ from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib import messages
 from django.core.management import call_command
+from django.http import HttpResponse, JsonResponse
 from io import StringIO
 import os, csv
 import threading
 import uuid
+import json
 from django.core.cache import cache
-from django.http import JsonResponse
+from .analisis_ahp import AnalizadorAHP
 
 class EmpleadoAdmin(UserAdmin):
     # Formulario para crear usuarios
@@ -75,9 +77,10 @@ class EmpleadoAdmin(UserAdmin):
     )
 
     def changelist_view(self, request, extra_context=None):
-        """Agregar contexto para el botón de importar."""
+        """Agregar contexto para el botón de importar y dashboard AHP."""
         extra_context = extra_context or {}
         extra_context['import_csv_url'] = 'import-csv/'
+        extra_context['dashboard_ahp_url'] = 'dashboard-ahp/'
         return super().changelist_view(request, extra_context)
     
     def get_urls(self):
@@ -85,6 +88,9 @@ class EmpleadoAdmin(UserAdmin):
         custom_urls = [
             path('import-csv/', self.admin_site.admin_view(self.import_csv_view), name='medidor_empleado_import_csv'),
             path('import-csv/status/<str:job_id>/', self.admin_site.admin_view(self.import_status_view), name='medidor_empleado_import_status'),
+            path('dashboard-ahp/', self.admin_site.admin_view(self.dashboard_ahp_view), name='medidor_empleado_dashboard_ahp'),
+            path('dashboard-ahp/export-csv/', self.admin_site.admin_view(self.export_ahp_csv), name='medidor_empleado_export_ahp_csv'),
+            path('dashboard-ahp/export-pdf/', self.admin_site.admin_view(self.export_ahp_pdf), name='medidor_empleado_export_ahp_pdf'),
         ]
         return custom_urls + urls
 
@@ -234,6 +240,194 @@ class EmpleadoAdmin(UserAdmin):
         # Limitar salida devuelta para no enviar megas
         out = data.get('output','')
         return JsonResponse({'status': data.get('status','unknown'), 'progress': data.get('progress',0), 'output_tail': out[-500:]})
+
+    def dashboard_ahp_view(self, request):
+        """
+        Dashboard AHP: Calcula el riesgo de alcohol usando el método AHP (Rating Model).
+        
+        Soporta filtros:
+        - departamento: Filtrar por departamento específico
+        - fecha_inicio: Filtrar mediciones desde esta fecha
+        - fecha_fin: Filtrar mediciones hasta esta fecha
+        
+        Pasos:
+        1. Matriz de Criterios: Crea matriz 2x2 (Severidad vs Frecuencia)
+        2. Obtiene datos de empleados con muestras positivas
+        3. Normaliza valores (max_alcohol y cantidad_positivos)
+        4. Calcula AHP scores (0-100)
+        5. Prepara top 10 empleados por riesgo para Chart.js
+        """
+        try:
+            # Obtener parámetros de filtro del request
+            departamento = request.GET.get('departamento', '').strip() or None
+            fecha_inicio = request.GET.get('fecha_inicio', '').strip() or None
+            fecha_fin = request.GET.get('fecha_fin', '').strip() or None
+            orden = request.GET.get('orden', 'mayor')  # 'mayor' o 'menor'
+            
+            # Instanciar analizador con pairwise_value = 3 (Severidad 3x más importante)
+            analizador = AnalizadorAHP(pairwise_value=3.0)
+            
+            # Ejecutar análisis completo (top 10 empleados) con filtros
+            df_resultados = analizador.analizar(
+                limite=10,
+                departamento=departamento,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                ordenar_descendente=(orden == 'mayor')
+            )
+            
+            # Obtener opciones de filtro para los select
+            departamentos = analizador.obtener_departamentos()
+            rango_fechas = analizador.obtener_rango_fechas()
+            
+            if df_resultados.empty:
+                context = self.admin_site.each_context(request)
+                context.update({
+                    'error_message': 'No hay datos disponibles para analizar con los filtros especificados.',
+                    'title': 'Dashboard AHP - Análisis de Riesgo de Alcohol',
+                    'departamentos': departamentos,
+                    'rango_fechas': rango_fechas,
+                    'filtros_aplicados': {
+                        'departamento': departamento,
+                        'fecha_inicio': fecha_inicio,
+                        'fecha_fin': fecha_fin,
+                    }
+                })
+                return render(request, 'admin/medidor/empleado/dashboard_ahp.html', context)
+            
+            # Preparar datos para Chart.js
+            nombres = df_resultados['identificacion'].tolist()
+            scores = df_resultados['ahp_score'].tolist()
+            niveles_reales = df_resultados['max_alcohol'].tolist()
+            niveles_riesgo = df_resultados['nivel_riesgo'].tolist()
+            
+            # Información de la matriz AHP
+            info_ahp = {
+                'peso_severidad': f"{analizador.peso_severidad:.4f}",
+                'peso_frecuencia': f"{analizador.peso_frecuencia:.4f}",
+                'pairwise_value': analizador.pairwise_value,
+            }
+            
+            # Descripción de filtros aplicados
+            filtros_descripcion = []
+            if departamento:
+                filtros_descripcion.append(f"Departamento: {departamento}")
+            if fecha_inicio:
+                filtros_descripcion.append(f"Desde: {fecha_inicio}")
+            if fecha_fin:
+                filtros_descripcion.append(f"Hasta: {fecha_fin}")
+            
+            context = self.admin_site.each_context(request)
+            context.update({
+                'title': 'Dashboard AHP - Análisis de Riesgo de Alcohol',
+                'nombres_json': json.dumps(nombres, ensure_ascii=False),
+                'scores_json': json.dumps([round(s, 2) for s in scores]),
+                'niveles_reales_json': json.dumps([round(n, 2) for n in niveles_reales]),
+                'niveles_riesgo_json': json.dumps(niveles_riesgo),
+                'info_ahp': info_ahp,
+                'resultados': df_resultados.to_dict('records'),
+                'departamentos': departamentos,
+                'rango_fechas': rango_fechas,
+                'orden': orden,
+                'filtros_aplicados': {
+                    'departamento': departamento,
+                    'fecha_inicio': fecha_inicio,
+                    'fecha_fin': fecha_fin,
+                },
+                'filtros_descripcion': ', '.join(filtros_descripcion) if filtros_descripcion else 'Ninguno',
+            })
+            
+            return render(request, 'admin/medidor/empleado/dashboard_ahp.html', context)
+        
+        except Exception as e:
+            # Obtener opciones de filtro incluso si hay error
+            try:
+                analizador = AnalizadorAHP()
+                departamentos = analizador.obtener_departamentos()
+                rango_fechas = analizador.obtener_rango_fechas()
+            except:
+                departamentos = []
+                rango_fechas = {'fecha_minima': None, 'fecha_maxima': None}
+            
+            context = self.admin_site.each_context(request)
+            context.update({
+                'error_message': f'Error al generar el dashboard: {str(e)}',
+                'title': 'Dashboard AHP - Análisis de Riesgo de Alcohol',
+                'departamentos': departamentos,
+                'rango_fechas': rango_fechas,
+            })
+            return render(request, 'admin/medidor/empleado/dashboard_ahp.html', context)
+
+    def export_ahp_csv(self, request):
+        """Exporta resultados AHP a CSV"""
+        try:
+            # Obtener parámetros de filtro
+            departamento = request.GET.get('departamento', '').strip() or None
+            fecha_inicio = request.GET.get('fecha_inicio', '').strip() or None
+            fecha_fin = request.GET.get('fecha_fin', '').strip() or None
+            orden = request.GET.get('orden', 'mayor')  # 'mayor' o 'menor'
+            
+            # Ejecutar análisis
+            analizador = AnalizadorAHP(pairwise_value=3.0)
+            df_resultados = analizador.analizar(
+                limite=None,
+                departamento=departamento,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                ordenar_descendente=(orden == 'mayor')
+            )
+            
+            if df_resultados.empty:
+                return HttpResponse('No hay datos para exportar', status=400)
+            
+            # Exportar a CSV
+            csv_content = AnalizadorAHP.exportar_a_csv(df_resultados)
+            
+            # Preparar respuesta
+            response = HttpResponse(csv_content, content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="ahp_analysis.csv"'
+            return response
+            
+        except Exception as e:
+            return HttpResponse(f'Error al exportar: {str(e)}', status=500)
+
+    def export_ahp_pdf(self, request):
+        """Exporta resultados AHP a PDF"""
+        try:
+            # Obtener parámetros de filtro
+            departamento = request.GET.get('departamento', '').strip() or None
+            fecha_inicio = request.GET.get('fecha_inicio', '').strip() or None
+            fecha_fin = request.GET.get('fecha_fin', '').strip() or None
+            orden = request.GET.get('orden', 'mayor')  # 'mayor' o 'menor'
+            
+            # Ejecutar análisis
+            analizador = AnalizadorAHP(pairwise_value=3.0)
+            df_resultados = analizador.analizar(
+                limite=None,
+                departamento=departamento,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                ordenar_descendente=(orden == 'mayor')
+            )
+            
+            if df_resultados.empty:
+                return HttpResponse('No hay datos para exportar', status=400)
+            
+            # Exportar a PDF
+            pdf_content = AnalizadorAHP.exportar_a_pdf(df_resultados)
+            
+            # Preparar respuesta
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="ahp_analysis.pdf"'
+            return response
+            
+        except ImportError as e:
+            return HttpResponse(
+                f'Error: reportlab no está instalado. Ejecuta: pip install reportlab',
+                status=500
+            )
+        except Exception as e:
+            return HttpResponse(f'Error al exportar: {str(e)}', status=500)
 
 admin.site.register(Empleado, EmpleadoAdmin)
 admin.site.register(MuestraAlcohol)
