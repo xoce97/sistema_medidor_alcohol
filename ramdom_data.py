@@ -21,15 +21,14 @@ DEPARTAMENTOS = ['Logística', 'Almacén', 'Operaciones', 'Ventas', 'Seguridad',
 
 def simular_lectura_sensor():
     escenario = random.choices(['sobrio', 'residuo', 'ebrio'], weights=[90, 7, 3])[0]
-
-    if escenario == 'sobrio':
-        val_analogico = random.randint(100, 180) # Ruido base del sensor (calentamiento)
-    elif escenario == 'residuo':
-        val_analogico = random.randint(181, 300) # Debajo del límite peligroso
-    else: # ebrio
-        val_analogico = random.randint(301, 800) # Alerta
     
-   
+    if escenario == 'sobrio':
+        val_analogico = random.randint(0,) # Ruido base del sensor (calentamiento)
+    elif escenario == 'residuo':
+        val_analogico = random.randint(, ) # Debajo del límite peligroso
+    else: # ebrio
+        val_analogico = random.randint(,) # Alerta
+
     # Cálculos físicos basados en tu modelo
     voltaje = round(val_analogico * (5.0 / 1023.0), 2)
     
