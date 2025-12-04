@@ -1,0 +1,9 @@
+{% extends 'admin/base_site.html' %}
+
+{% block content %}
+<div class="container mt-3">
+    <h1>Resultado de la importación</h1>
+    <pre style="white-space: pre-wrap; background: #f8f9fa; padding: 12px; border-radius:4px;">{{ salida }}</pre>
+    <a class="btn btn-secondary mt-3" href="../">Volver</a>
+</div>
+{% endblock %}

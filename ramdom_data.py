@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 
 # Configuración inicial
 fake = Faker('es_MX')  # Datos en español de México
-NUM_EMPLEADOS = 100
-NUM_MUESTRAS = 100000
+NUM_EMPLEADOS = 75
+NUM_MUESTRAS = 1000
 
 # Departamentos típicos
 DEPARTAMENTOS = ['Logística', 'Almacén', 'Operaciones', 'Ventas', 'Seguridad', 'Administración']
