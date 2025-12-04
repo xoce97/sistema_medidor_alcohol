@@ -1,0 +1,522 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    .ahp-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .ahp-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .ahp-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 28px;
+    }
+    
+    .filter-panel {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .filter-panel h3 {
+        margin: 0 0 15px 0;
+        color: #667eea;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-row label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 13px;
+    }
+    
+    .filter-row select,
+    .filter-row input[type="date"] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+    
+    .filter-row select:focus,
+    .filter-row input[type="date"]:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    
+    .filter-buttons-left {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .filter-buttons-right {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .filter-buttons button,
+    .filter-buttons a {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-apply {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-apply:hover {
+        background: #5568d3;
+    }
+    
+    .btn-reset {
+        background: #f0f0f0;
+        color: #333;
+    }
+    
+    .btn-reset:hover {
+        background: #e0e0e0;
+    }
+    
+    .btn-export {
+        background: #27ae60;
+        color: white;
+        font-size: 12px;
+    }
+    
+    .btn-export:hover {
+        background: #229954;
+    }
+    
+    .btn-reset:hover {
+        background: #e0e0e0;
+    }
+    
+    .filter-status {
+        background: #e8f4f8;
+        border-left: 4px solid #667eea;
+        padding: 10px 15px;
+        margin-top: 10px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #333;
+    }
+    
+    .ahp-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .info-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-card h3 {
+        margin: 0 0 10px 0;
+        color: #667eea;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .info-card .value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .chart-container {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        height: 500px;
+    }
+    
+    .table-container {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+    
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table-container th {
+        background: #f5f5f5;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #ddd;
+        color: #333;
+    }
+    
+    .table-container td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .table-container tr:hover {
+        background: #f9f9f9;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-critico {
+        background: #ff4757;
+        color: white;
+    }
+    
+    .badge-alto {
+        background: #ffa502;
+        color: white;
+    }
+    
+    .badge-medio {
+        background: #ffd93d;
+        color: #333;
+    }
+    
+    .badge-bajo {
+        background: #2ed573;
+        color: white;
+    }
+    
+    .error-message {
+        background: #ffebee;
+        border: 1px solid #ef5350;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="ahp-container">
+    <div class="ahp-header">
+        <h1>📊 {{ title }}</h1>
+        <p>Metodología AHP (Rating Model) - Análisis de Riesgo de Alcohol en Empleados</p>
+    </div>
+    
+    <!-- Panel de Filtros -->
+    <div class="filter-panel">
+        <h3>🔍 Filtros de Búsqueda</h3>
+        <form method="get" id="filterForm">
+            <div class="filter-row">
+                <div>
+                    <label for="departamento">Departamento:</label>
+                    <select name="departamento" id="departamento">
+                        <option value="">-- Todos los departamentos --</option>
+                        {% for dept in departamentos %}
+                            <option value="{{ dept }}" {% if filtros_aplicados.departamento == dept %}selected{% endif %}>
+                                {{ dept }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="fecha_inicio">Fecha Inicio:</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" 
+                           value="{{ filtros_aplicados.fecha_inicio }}"
+                           {% if rango_fechas.fecha_minima %}min="{{ rango_fechas.fecha_minima|date:'Y-m-d' }}"{% endif %}
+                           {% if rango_fechas.fecha_maxima %}max="{{ rango_fechas.fecha_maxima|date:'Y-m-d' }}"{% endif %}>
+                </div>
+                <div>
+                    <label for="fecha_fin">Fecha Fin:</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" 
+                           value="{{ filtros_aplicados.fecha_fin }}"
+                           {% if rango_fechas.fecha_minima %}min="{{ rango_fechas.fecha_minima|date:'Y-m-d' }}"{% endif %}
+                           {% if rango_fechas.fecha_maxima %}max="{{ rango_fechas.fecha_maxima|date:'Y-m-d' }}"{% endif %}>
+                </div>
+                <div>
+                    <label for="orden">Ordenar por Riesgo:</label>
+                    <select name="orden" id="orden">
+                        <option value="mayor" {% if request.GET.orden != 'menor' %}selected{% endif %}>Mayor a Menor (Riesgo)</option>
+                        <option value="menor" {% if request.GET.orden == 'menor' %}selected{% endif %}>Menor a Mayor (Seguro)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-buttons">
+                <div class="filter-buttons-left">
+                    <button type="submit" class="btn-apply">🔎 Aplicar Filtros</button>
+                    <a href="?" class="btn-reset">🔄 Limpiar</a>
+                </div>
+                <div class="filter-buttons-right">
+                    <a href="export-csv/?departamento={{ filtros_aplicados.departamento }}&fecha_inicio={{ filtros_aplicados.fecha_inicio }}&fecha_fin={{ filtros_aplicados.fecha_fin }}&orden={{ request.GET.orden|default:'mayor' }}" 
+                       class="btn-export" title="Descargar resultados en CSV">📥 CSV</a>
+                    <a href="export-pdf/?departamento={{ filtros_aplicados.departamento }}&fecha_inicio={{ filtros_aplicados.fecha_inicio }}&fecha_fin={{ filtros_aplicados.fecha_fin }}&orden={{ request.GET.orden|default:'mayor' }}" 
+                       class="btn-export" title="Descargar resultados en PDF">📄 PDF</a>
+                </div>
+            </div>
+            {% if filtros_descripcion %}
+            <div class="filter-status">
+                <strong>Filtros activos:</strong> {{ filtros_descripcion }} | <strong>Orden:</strong> {% if request.GET.orden == 'menor' %}Menor a Mayor (Empleados Seguros){% else %}Mayor a Menor (Riesgo){% endif %}
+            </div>
+            {% endif %}
+        </form>
+    </div>
+    
+    {% if error_message %}
+    <div class="error-message">
+        ⚠️ {{ error_message }}
+    </div>
+    {% endif %}
+    
+    {% if info_ahp %}
+    <div class="ahp-info">
+        <div class="info-card">
+            <h3>Peso: Severidad</h3>
+            <div class="value">{{ info_ahp.peso_severidad }}</div>
+            <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">Máximo alcohol detectado</p>
+        </div>
+        <div class="info-card">
+            <h3>Peso: Frecuencia</h3>
+            <div class="value">{{ info_ahp.peso_frecuencia }}</div>
+            <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">Cantidad de mediciones positivas</p>
+        </div>
+        <div class="info-card">
+            <h3>Comparación Pareada</h3>
+            <div class="value">{{ info_ahp.pairwise_value }}:1</div>
+            <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">Severidad vs Frecuencia</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if nombres_json %}
+    <div class="chart-container">
+        <canvas id="ahpChart"></canvas>
+    </div>
+    {% endif %}
+    
+    {% if resultados %}
+    <div class="table-container">
+        <h2 style="margin-top: 0;">📈 Detalle de Empleados (Top 10 por Riesgo)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Identificación</th>
+                    <th>Nombre</th>
+                    <th>Max Alcohol (ppm)</th>
+                    <th>Mediciones Positivas</th>
+                    <th>Score AHP (%)</th>
+                    <th>Nivel de Riesgo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in resultados %}
+                <tr>
+                    <td>{{ result.identificacion }}</td>
+                    <td>{{ result.nombre }}</td>
+                    <td>{{ result.max_alcohol|floatformat:2 }}</td>
+                    <td>{{ result.cantidad_positivos }}</td>
+                    <td><strong>{{ result.ahp_score|floatformat:2 }}%</strong></td>
+                    <td>
+                        {% if result.nivel_riesgo == 'CRÍTICO' %}
+                            <span class="badge badge-critico">{{ result.nivel_riesgo }}</span>
+                        {% elif result.nivel_riesgo == 'ALTO' %}
+                            <span class="badge badge-alto">{{ result.nivel_riesgo }}</span>
+                        {% elif result.nivel_riesgo == 'MEDIO' %}
+                            <span class="badge badge-medio">{{ result.nivel_riesgo }}</span>
+                        {% else %}
+                            <span class="badge badge-bajo">{{ result.nivel_riesgo }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nombres = {{ nombres_json|safe }};
+    const scores = {{ scores_json|safe }};
+    const nivelesReales = {{ niveles_reales_json|safe }};
+    const nivelesRiesgo = {{ niveles_riesgo_json|safe }};
+    
+    if (!nombres || nombres.length === 0) {
+        console.log('No hay datos para graficar');
+        return;
+    }
+    
+    // Asignar colores según nivel de riesgo
+    const coloresRiesgo = nivelesRiesgo.map(nivel => {
+        if (nivel === 'CRÍTICO') return 'rgba(255, 71, 87, 0.8)';
+        if (nivel === 'ALTO') return 'rgba(255, 165, 2, 0.8)';
+        if (nivel === 'MEDIO') return 'rgba(255, 217, 61, 0.8)';
+        return 'rgba(46, 213, 115, 0.8)';
+    });
+    
+    const ctx = document.getElementById('ahpChart');
+    if (!ctx) {
+        console.log('Canvas element not found');
+        return;
+    }
+    
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: nombres,
+            datasets: [
+                {
+                    label: 'Score AHP (%)',
+                    data: scores,
+                    backgroundColor: coloresRiesgo,
+                    borderColor: coloresRiesgo.map(c => c.replace('0.8', '1')),
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    borderRadius: 4,
+                    hoverBackgroundColor: coloresRiesgo.map(c => c.replace('0.8', '1')),
+                },
+                {
+                    label: 'Max Alcohol (ppm)',
+                    type: 'line',
+                    data: nivelesReales,
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    yAxisID: 'y1',
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 },
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 4,
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Score AHP (%)',
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    grid: {
+                        drawBorder: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Max Alcohol (ppm)',
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

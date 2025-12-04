@@ -8,6 +8,10 @@ class Empleado(AbstractUser):
     departamento = models.CharField(max_length=50)
     telefono = models.CharField(max_length=15, blank=True, null=True)
     fecha_ingreso = models.DateField(blank=True, null=True)
+    
+    # Campos AHP
+    ahp_score = models.FloatField(default=0.0)
+    ahp_last_updated = models.DateTimeField(blank=True, null=True)
 
     # Metadata
     USERNAME_FIELD = 'username'

@@ -52,7 +52,7 @@
                             <td>{{ muestra.fecha|date:"d/m/Y H:i" }}</td>
                             <td>{{ muestra.valor_analogico }}</td>
                             <td>
-                                <span class="badge bg-{% if muestra.alcohol_ppm > 50 %}danger{% else %}success{% endif %}">
+                                <span class="badge bg-{% if muestra.alcohol_ppm > 301 %}danger{% else %}success{% endif %}">
                                     {{ muestra.alcohol_ppm|floatformat:2 }} ppm
                                 </span>
                             </td>
