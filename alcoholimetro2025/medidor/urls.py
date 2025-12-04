@@ -12,9 +12,6 @@ from .views import (
     detalle_empleado_view,
     criterios_ahp_view,
     admin_dashboard_view,
-    # nuevas vistas administrativas
-    upload_csv_view,
-    run_ahp_view,
 )
 
 urlpatterns = [
@@ -31,7 +28,4 @@ urlpatterns = [
     path('criterios-ahp/', criterios_ahp_view, name='criterios_ahp'),
     # Dashboard administrativo
     path('admin-dashboard/', admin_dashboard_view, name='admin_dashboard'),
-    # Endpoints para administración (subir CSV y ejecutar análisis AHP)
-    path('admin-dashboard/upload-csv/', upload_csv_view, name='admin_upload_csv'),
-    path('admin-dashboard/run-ahp/', run_ahp_view, name='admin_run_ahp'),
 ]

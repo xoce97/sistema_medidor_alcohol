@@ -12,14 +12,6 @@ from .analisis_ahp import AnalizadorAHP
 import requests
 import json
 
-# Nuevos imports para subida de archivos y ejecución de comandos
-import os
-from django.conf import settings
-from django.contrib import messages
-from django.core.management import call_command
-from django.contrib.admin.views.decorators import staff_member_required
-from io import StringIO
-
 class CustomLoginView(LoginView):
     template_name = 'login.html'
     form_class = LoginForm
@@ -76,75 +68,6 @@ def recibir_datos(request):
         return JsonResponse({'status': 'error', 'message': 'Empleado no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-
-# Vistas administrativas: subida de CSV y ejecución de análisis AHP
-@staff_member_required
-@require_POST
-def upload_csv_view(request):
-    """Recibe dos archivos ('empleados_csv' y 'muestras_csv'), los guarda en /uploads
-    dentro de la raíz del proyecto y muestra mensajes de éxito/error.
-    """
-    empleados_file = request.FILES.get('empleados_csv')
-    muestras_file = request.FILES.get('muestras_csv')
-
-    uploaded = []
-    try:
-        upload_dir = os.path.join(settings.BASE_DIR, 'uploads')
-        os.makedirs(upload_dir, exist_ok=True)
-
-        if empleados_file:
-            emp_path = os.path.join(upload_dir, empleados_file.name)
-            with open(emp_path, 'wb') as f:
-                for chunk in empleados_file.chunks():
-                    f.write(chunk)
-            uploaded.append(emp_path)
-
-        if muestras_file:
-            m_path = os.path.join(upload_dir, muestras_file.name)
-            with open(m_path, 'wb') as f:
-                for chunk in muestras_file.chunks():
-                    f.write(chunk)
-            uploaded.append(m_path)
-
-        if uploaded:
-            messages.success(request, f"Archivos subidos: {', '.join(os.path.basename(p) for p in uploaded)}")
-        else:
-            messages.info(request, 'No se enviaron archivos.')
-
-    except Exception as e:
-        messages.error(request, f'Error al guardar archivos: {e}')
-
-    return redirect('admin_dashboard')
-
-
-@staff_member_required
-@require_POST
-def run_ahp_view(request):
-    """Ejecuta el comando de gestión 'analizar_ahp' y guarda la salida en la sesión para mostrarla.
-    Permite opciones sencillas: 'inicializar_criterios' y 'mostrar_stats'.
-    """
-    inicializar = bool(request.POST.get('inicializar_criterios'))
-    mostrar_stats = bool(request.POST.get('mostrar_stats'))
-
-    try:
-        out = StringIO()
-        cmd_kwargs = {}
-        if inicializar:
-            cmd_kwargs['inicializar_criterios'] = True
-        if mostrar_stats:
-            cmd_kwargs['mostrar_stats'] = True
-
-        call_command('analizar_ahp', **cmd_kwargs, stdout=out)
-
-        salida = out.getvalue()
-        request.session['analizar_ahp_output'] = salida
-        messages.success(request, 'Análisis AHP ejecutado correctamente. Revisa el resultado en la sección de salida.')
-
-    except Exception as e:
-        messages.error(request, f'Error al ejecutar análisis: {e}')
-
-    return redirect('admin_dashboard')
 
 
 @csrf_exempt
@@ -333,15 +256,6 @@ def admin_dashboard_view(request):
         'chart_data': chart_data,
         'stats': stats,
         'es_admin': True,
-        'analizar_ahp_output': request.session.pop('analizar_ahp_output', None),
-        'uploaded_files': []
     }
-    # Listar archivos previamente subidos (si existen)
-    try:
-        upload_dir = os.path.join(settings.BASE_DIR, 'uploads')
-        if os.path.isdir(upload_dir):
-            context['uploaded_files'] = [f for f in os.listdir(upload_dir) if os.path.isfile(os.path.join(upload_dir, f))]
-    except Exception:
-        context['uploaded_files'] = []
     
     return render(request, 'admin_dashboard.html', context)

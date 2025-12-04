@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 
 # Configuración inicial
 fake = Faker('es_MX')  # Datos en español de México
-NUM_EMPLEADOS = 75
-NUM_MUESTRAS = 1000
+NUM_EMPLEADOS = 100
+NUM_MUESTRAS = 100000
 
 # Departamentos típicos
 DEPARTAMENTOS = ['Logística', 'Almacén', 'Operaciones', 'Ventas', 'Seguridad', 'Administración']
@@ -23,11 +23,11 @@ def simular_lectura_sensor():
     escenario = random.choices(['sobrio', 'residuo', 'ebrio'], weights=[90, 7, 3])[0]
     
     if escenario == 'sobrio':
-        val_analogico = random.randint(0,) # Ruido base del sensor (calentamiento)
+        val_analogico = random.randint(100, 180) # Ruido base del sensor (calentamiento)
     elif escenario == 'residuo':
-        val_analogico = random.randint(, ) # Debajo del límite peligroso
+        val_analogico = random.randint(181, 300) # Debajo del límite peligroso
     else: # ebrio
-        val_analogico = random.randint(,) # Alerta
+        val_analogico = random.randint(301, 800) # Alerta
 
     # Cálculos físicos basados en tu modelo
     voltaje = round(val_analogico * (5.0 / 1023.0), 2)
