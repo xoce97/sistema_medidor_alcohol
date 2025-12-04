@@ -127,7 +127,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'medidor.Empleado'  # Indica a Django que use este modelo para autenticación
 
  #Redirección después de login
-LOGIN_REDIRECT_URL = 'index'  # Usa el nombre de tu URL del index
+LOGIN_REDIRECT_URL = 'dashboard'  # Usa el nombre de tu URL del dashboard
 
 # Redirección después de logout
 LOGOUT_REDIRECT_URL = 'inicio'  # Usa el nombre de tu URL de inicio
