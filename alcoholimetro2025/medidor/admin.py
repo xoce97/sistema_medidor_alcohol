@@ -482,11 +482,17 @@ class MuestraAdmin(admin.ModelAdmin):
 
             # Renderizar tabla de correlación en una página simple del admin
             html_table = corr.to_html(classes='table table-striped', float_format="%.4f")
+            # preparar ids seleccionados para enlaces de export
+            selected_ids = ','.join([str(int(x)) for x in queryset.values_list('pk', flat=True)])
             context = self.admin_site.each_context(request)
             context.update({
                 'title': 'Correlación - Muestras de Alcohol',
                 'correlation_table': html_table,
                 'selected_count': len(qs),
+                'selected_ids': selected_ids,
+                # nombres de url dentro del namespace admin
+                'export_csv_url_name': 'admin:medidor_muestraalcohol_export_correlacion_csv',
+                'export_pdf_url_name': 'admin:medidor_muestraalcohol_export_correlacion_pdf',
             })
             return render(request, 'admin/medidor/muestra_correlacion.html', context)
 
@@ -495,5 +501,124 @@ class MuestraAdmin(admin.ModelAdmin):
             return
 
     ver_correlacion.short_description = 'Ver correlación entre variables (hora, ppm, ... )'
+    def get_urls(self):
+        """Agregar URLs custom para exportar la correlación como CSV/PDF."""
+        from django.urls import path
+
+        urls = super().get_urls()
+        custom = [
+            path('correlacion-export-csv/', self.admin_site.admin_view(self.export_correlacion_csv), name='medidor_muestraalcohol_export_correlacion_csv'),
+            path('correlacion-export-pdf/', self.admin_site.admin_view(self.export_correlacion_pdf), name='medidor_muestraalcohol_export_correlacion_pdf'),
+        ]
+        return custom + urls
+
+    def export_correlacion_csv(self, request):
+        """Exportar la matriz de correlación seleccionada como CSV.
+
+        Espera `ids` como parametro GET con ids separados por coma.
+        """
+        ids = request.GET.get('ids', '')
+        if not ids:
+            messages.error(request, 'No se especificaron muestras para exportar.')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        id_list = [int(x) for x in ids.split(',') if x.strip().isdigit()]
+        qs = MuestraAlcohol.objects.filter(pk__in=id_list)
+
+        try:
+            import pandas as pd
+        except ImportError:
+            messages.error(request, 'Pandas no está instalado. Ejecuta: pip install pandas')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        qs_vals = list(qs.values('valor_analogico', 'voltaje', 'alcohol_ppm', 'fecha'))
+        if not qs_vals:
+            messages.info(request, 'No hay datos para exportar.')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        df = pd.DataFrame.from_records(qs_vals)
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        df['hora'] = df['fecha'].dt.hour
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        numeric_cols = [c for c in ['valor_analogico', 'voltaje', 'alcohol_ppm', 'hora', 'dia_semana'] if c in df.columns]
+        df_num = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+        corr = df_num.corr()
+
+        # Generar CSV
+        csv_bytes = corr.to_csv(float_format='%.4f', index=True).encode('utf-8')
+        response = HttpResponse(csv_bytes, content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="correlacion_muestras.csv"'
+        return response
+
+    def export_correlacion_pdf(self, request):
+        """Exportar la matriz de correlación como PDF simple.
+
+        Usa reportlab si está disponible.
+        """
+        ids = request.GET.get('ids', '')
+        if not ids:
+            messages.error(request, 'No se especificaron muestras para exportar.')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        id_list = [int(x) for x in ids.split(',') if x.strip().isdigit()]
+        qs = MuestraAlcohol.objects.filter(pk__in=id_list)
+
+        try:
+            import pandas as pd
+        except ImportError:
+            messages.error(request, 'Pandas no está instalado. Ejecuta: pip install pandas')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        qs_vals = list(qs.values('valor_analogico', 'voltaje', 'alcohol_ppm', 'fecha'))
+        if not qs_vals:
+            messages.info(request, 'No hay datos para exportar.')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
+
+        df = pd.DataFrame.from_records(qs_vals)
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        df['hora'] = df['fecha'].dt.hour
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        numeric_cols = [c for c in ['valor_analogico', 'voltaje', 'alcohol_ppm', 'hora', 'dia_semana'] if c in df.columns]
+        df_num = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+        corr = df_num.corr()
+
+        # Crear PDF
+        try:
+            from io import BytesIO
+            from reportlab.lib.pagesizes import landscape, A4
+            from reportlab.lib import colors
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+            from reportlab.lib.styles import getSampleStyleSheet
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+            styles = getSampleStyleSheet()
+            elements = []
+
+            # Título
+            elements.append(Paragraph('Matriz de Correlación - Muestras de Alcohol', styles['Heading2']))
+
+            # Preparar tabla: encabezados + filas
+            headers = [''] + list(corr.columns)
+            data = [headers]
+            for idx in corr.index:
+                row = [idx] + [f"{corr.loc[idx, col]:.4f}" for col in corr.columns]
+                data.append(row)
+
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+            ]))
+            elements.append(table)
+            doc.build(elements)
+            buffer.seek(0)
+            pdf = buffer.getvalue()
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="correlacion_muestras.pdf"'
+            return response
+        except ImportError:
+            messages.error(request, 'ReportLab no está instalado. Ejecuta: pip install reportlab')
+            return redirect(request.META.get('HTTP_REFERER', '..'))
 
 admin.site.register(MuestraAlcohol, MuestraAdmin)
