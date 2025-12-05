@@ -15,6 +15,7 @@ import uuid
 import json
 from django.core.cache import cache
 from .analisis_ahp import AnalizadorAHP
+from .analisis_correlacion import AnalizadorCorrelacion
 
 class EmpleadoAdmin(UserAdmin):
     # Formulario para crear usuarios
@@ -77,10 +78,11 @@ class EmpleadoAdmin(UserAdmin):
     )
 
     def changelist_view(self, request, extra_context=None):
-        """Agregar contexto para el botón de importar y dashboard AHP."""
+        """Agregar contexto para el botón de importar, dashboard AHP y dashboard de correlación."""
         extra_context = extra_context or {}
         extra_context['import_csv_url'] = 'import-csv/'
         extra_context['dashboard_ahp_url'] = 'dashboard-ahp/'
+        extra_context['dashboard_correlacion_url'] = 'dashboard-correlacion/'
         return super().changelist_view(request, extra_context)
     
     def get_urls(self):
@@ -91,6 +93,7 @@ class EmpleadoAdmin(UserAdmin):
             path('dashboard-ahp/', self.admin_site.admin_view(self.dashboard_ahp_view), name='medidor_empleado_dashboard_ahp'),
             path('dashboard-ahp/export-csv/', self.admin_site.admin_view(self.export_ahp_csv), name='medidor_empleado_export_ahp_csv'),
             path('dashboard-ahp/export-pdf/', self.admin_site.admin_view(self.export_ahp_pdf), name='medidor_empleado_export_ahp_pdf'),
+            path('dashboard-correlacion/', self.admin_site.admin_view(self.dashboard_correlacion_view), name='medidor_empleado_dashboard_correlacion'),
         ]
         return custom_urls + urls
 
@@ -428,6 +431,77 @@ class EmpleadoAdmin(UserAdmin):
             )
         except Exception as e:
             return HttpResponse(f'Error al exportar: {str(e)}', status=500)
+
+    def dashboard_correlacion_view(self, request):
+        """
+        Dashboard de Correlación: Analiza correlaciones entre:
+        1. Variables técnicas (voltaje vs alcohol_ppm) - Diagnóstico de hardware
+        2. Variables demográficas (antigüedad vs alcohol_ppm) - Análisis de causas humanas
+        
+        Prepara datos para gráficas Chart.js.
+        """
+        try:
+            # Instanciar analizador
+            analizador = AnalizadorCorrelacion()
+            
+            # Obtener datos
+            df = analizador.obtener_datos()
+            
+            if df.empty:
+                context = self.admin_site.each_context(request)
+                context.update({
+                    'error_message': 'No hay datos disponibles para analizar.',
+                    'title': 'Dashboard de Correlación - Análisis de Sensores y Demografía',
+                })
+                return render(request, 'admin/medidor/empleado/dashboard_correlacion.html', context)
+            
+            # Análisis de sensores
+            resultado_sensores = analizador.analizar_sensores()
+            
+            # Análisis de demografía
+            resultado_demo = analizador.analizar_demografia()
+            
+            # Preparar datos para scatter plot (voltaje vs alcohol_ppm)
+            scatter_data = resultado_sensores.get('datos_scatter', [])
+            scatter_x = [punto[0] for punto in scatter_data]
+            scatter_y = [punto[1] for punto in scatter_data]
+            
+            # Preparar datos para gráfico de riesgo por departamento
+            riesgo_depto = resultado_demo.get('riesgo_por_departamento', {})
+            departamentos = list(riesgo_depto.keys())
+            promedios_alcohol = list(riesgo_depto.values())
+            
+            # Serializar datos para Chart.js
+            context = self.admin_site.each_context(request)
+            context.update({
+                'title': 'Dashboard de Correlación - Análisis de Sensores y Demografía',
+                
+                # Datos de análisis de sensores
+                'correlacion_sensores': resultado_sensores.get('correlacion'),
+                'veredicto_sensores': resultado_sensores.get('veredicto'),
+                'scatter_x_json': json.dumps(scatter_x, ensure_ascii=False),
+                'scatter_y_json': json.dumps(scatter_y, ensure_ascii=False),
+                
+                # Datos de análisis demográfico
+                'correlacion_antiguedad': resultado_demo.get('correlacion_antiguedad'),
+                'conclusion_antiguedad': resultado_demo.get('conclusion_antiguedad'),
+                'departamentos_json': json.dumps(departamentos, ensure_ascii=False),
+                'promedios_alcohol_json': json.dumps([round(p, 2) for p in promedios_alcohol]),
+                
+                # Información general
+                'total_muestras': len(df),
+                'total_empleados': df['departamento'].nunique() if 'departamento' in df.columns else 0,
+            })
+            
+            return render(request, 'admin/medidor/empleado/dashboard_correlacion.html', context)
+        
+        except Exception as e:
+            context = self.admin_site.each_context(request)
+            context.update({
+                'error_message': f'Error al generar el dashboard: {str(e)}',
+                'title': 'Dashboard de Correlación - Análisis de Sensores y Demografía',
+            })
+            return render(request, 'admin/medidor/empleado/dashboard_correlacion.html', context)
 
 admin.site.register(Empleado, EmpleadoAdmin)
 admin.site.register(MuestraAlcohol)

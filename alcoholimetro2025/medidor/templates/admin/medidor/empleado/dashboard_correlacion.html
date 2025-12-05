@@ -1,0 +1,535 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    .correlacion-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .correlacion-header {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .correlacion-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 28px;
+    }
+    
+    .correlacion-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 14px;
+    }
+    
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .card-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #666;
+        font-weight: 600;
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+    
+    .card-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    
+    .card-description {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+    }
+    
+    .card.sensors {
+        border-left: 4px solid #3498db;
+    }
+    
+    .card.demographics {
+        border-left: 4px solid #2ecc71;
+    }
+    
+    .card.status {
+        border-left: 4px solid #e74c3c;
+    }
+    
+    .chart-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart-section h2 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 18px;
+        font-weight: 600;
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 15px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    
+    .conclusions-section {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .conclusions-section h2 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 18px;
+        font-weight: 600;
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 15px;
+    }
+    
+    .conclusion-box {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+    }
+    
+    .conclusion-box.warning {
+        border-left-color: #f39c12;
+        background: #fffbf0;
+    }
+    
+    .conclusion-box.success {
+        border-left-color: #27ae60;
+        background: #f0fdf4;
+    }
+    
+    .conclusion-box.danger {
+        border-left-color: #e74c3c;
+        background: #ffe5e5;
+    }
+    
+    .conclusion-label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 13px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+    
+    .conclusion-text {
+        color: #555;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #ecf0f1;
+    }
+    
+    .stat {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 5px;
+        text-transform: uppercase;
+    }
+    
+    .error-message {
+        background: #ffebee;
+        border: 1px solid #ef5350;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .no-data {
+        background: #ecf0f1;
+        padding: 40px;
+        text-align: center;
+        border-radius: 8px;
+        color: #7f8c8d;
+    }
+
+    @media (max-width: 768px) {
+        .summary-cards {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="correlacion-container">
+    
+    <!-- Header -->
+    <div class="correlacion-header">
+        <h1>📊 Dashboard de Correlación</h1>
+        <p>Análisis integrado de sensores y variables demográficas</p>
+    </div>
+    
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="error-message">
+            ⚠️ {{ error_message }}
+        </div>
+    {% endif %}
+    
+    <!-- Summary Cards -->
+    {% if not error_message %}
+        <div class="summary-cards">
+            <!-- Card: Correlación Sensores -->
+            <div class="card sensors">
+                <div class="card-title">📏 Correlación Sensores (Pearson)</div>
+                <div class="card-value">
+                    {% if correlacion_sensores is not None %}
+                        {{ correlacion_sensores|floatformat:3 }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="card-description">
+                    Mide la linealidad entre voltaje y alcohol detectado.
+                    <br><strong>Rango:</strong> -1 a 1 (>0.9 = Excelente)
+                </div>
+            </div>
+            
+            <!-- Card: Veredicto de Sensores -->
+            <div class="card status">
+                <div class="card-title">🔧 Diagnóstico de Sensores</div>
+                <div class="card-description">
+                    <strong>{{ veredicto_sensores }}</strong>
+                </div>
+            </div>
+            
+            <!-- Card: Correlación Antigüedad -->
+            <div class="card demographics">
+                <div class="card-title">👥 Correlación Antigüedad</div>
+                <div class="card-value">
+                    {% if correlacion_antiguedad is not None %}
+                        {{ correlacion_antiguedad|floatformat:3 }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="card-description">
+                    Relación entre años en la empresa e incidencias de alcohol.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chart 1: Scatter Plot (Diagnóstico de Sensores) -->
+        <div class="chart-section">
+            <h2>📈 Diagnóstico de Sensores (Scatter Plot)</h2>
+            <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 15px;">
+                Visualización de la relación lineal entre voltaje y concentración de alcohol.
+                Una línea recta perfecta indica sensores calibrados correctamente.
+            </p>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Chart 2: Bar Chart (Riesgo por Departamento) -->
+        <div class="chart-section">
+            <h2>🏢 Riesgo Promedio por Departamento</h2>
+            <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 15px;">
+                Promedio de concentración de alcohol (PPM) detectada en cada departamento.
+                Departamentos con mayor altura = Mayor riesgo promedio.
+            </p>
+            <div class="chart-container">
+                <canvas id="departmentChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Conclusions Section -->
+        <div class="conclusions-section">
+            <h2>💡 Conclusiones Automáticas</h2>
+            
+            <!-- Sensor Calibration Conclusion -->
+            <div class="conclusion-box {% if 'Revisar' in veredicto_sensores %}warning{% else %}success{% endif %}">
+                <div class="conclusion-label">🔧 Calibración de Sensores</div>
+                <div class="conclusion-text">
+                    {{ veredicto_sensores }}
+                    {% if correlacion_sensores is not None %}
+                        <br>
+                        Coeficiente de correlación: <strong>r = {{ correlacion_sensores|floatformat:4 }}</strong>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Demographic Analysis Conclusion -->
+            <div class="conclusion-box {% if 'mayor' in conclusion_antiguedad|lower %}warning{% else %}success{% endif %}">
+                <div class="conclusion-label">👥 Análisis Demográfico</div>
+                <div class="conclusion-text">
+                    {{ conclusion_antiguedad }}
+                    {% if correlacion_antiguedad is not None %}
+                        <br>
+                        Coeficiente de correlación: <strong>r = {{ correlacion_antiguedad|floatformat:4 }}</strong>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Statistics Row -->
+            <div class="stats-row">
+                <div class="stat">
+                    <div class="stat-value">{{ total_muestras }}</div>
+                    <div class="stat-label">Total de Muestras</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">{{ total_empleados }}</div>
+                    <div class="stat-label">Departamentos Únicos</div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="no-data">
+            <p>No hay datos disponibles para mostrar el dashboard.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<!-- Chart.js Library from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+    // Data from Django context
+    const scatterXData = {{ scatter_x_json|safe }};
+    const scatterYData = {{ scatter_y_json|safe }};
+    const departmentLabels = {{ departamentos_json|safe }};
+    const departmentData = {{ promedios_alcohol_json|safe }};
+
+    // ==========================================
+    // Scatter Plot: Voltaje vs Alcohol PPM
+    // ==========================================
+    {% if scatter_x_json %}
+        const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+        const scatterChart = new Chart(scatterCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Muestras (Voltaje vs Alcohol PPM)',
+                    data: scatterXData.map((x, i) => ({
+                        x: x,
+                        y: scatterYData[i]
+                    })),
+                    backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1.5,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    showLine: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: 12,
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 11 },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Voltaje: ' + context.raw.x.toFixed(2) + 
+                                       'V | Alcohol: ' + context.raw.y.toFixed(2) + ' PPM';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Voltaje (V)',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Alcohol PPM',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                }
+            }
+        });
+    {% endif %}
+
+    // ==========================================
+    // Bar Chart: Riesgo por Departamento
+    // ==========================================
+    {% if departamentos_json %}
+        const deptCtx = document.getElementById('departmentChart').getContext('2d');
+        const departmentChart = new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: departmentLabels,
+                datasets: [{
+                    label: 'Promedio de Alcohol PPM',
+                    data: departmentData,
+                    backgroundColor: [
+                        'rgba(231, 76, 60, 0.8)',   // Rojo para primer bar
+                        'rgba(241, 196, 15, 0.8)',  // Amarillo
+                        'rgba(52, 152, 219, 0.8)',  // Azul
+                        'rgba(46, 204, 113, 0.8)',  // Verde
+                        'rgba(155, 89, 182, 0.8)',  // Púrpura
+                        'rgba(26, 188, 156, 0.8)',  // Turquesa
+                        'rgba(230, 126, 34, 0.8)',  // Naranja
+                        'rgba(149, 165, 166, 0.8)   // Gris
+                    ],
+                    borderColor: [
+                        'rgba(192, 57, 43, 1)',
+                        'rgba(183, 149, 11, 1)',
+                        'rgba(41, 128, 185, 1)',
+                        'rgba(39, 174, 96, 1)',
+                        'rgba(142, 68, 173, 1)',
+                        'rgba(22, 160, 133, 1)',
+                        'rgba(203, 67, 53, 1)',
+                        'rgba(127, 140, 141, 1)'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'x',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: 12,
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 11 },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Promedio: ' + context.raw.toFixed(2) + ' PPM';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Departamento',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Promedio de Alcohol (PPM)',
+                            font: { size: 12, weight: 'bold' }
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                }
+            }
+        });
+    {% endif %}
+</script>
+
+{% endblock %}
