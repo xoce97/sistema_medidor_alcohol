@@ -440,4 +440,60 @@ class EmpleadoAdmin(UserAdmin):
             return HttpResponse(f'Error al exportar: {str(e)}', status=500)
 
 admin.site.register(Empleado, EmpleadoAdmin)
-admin.site.register(MuestraAlcohol)
+class MuestraAdmin(admin.ModelAdmin):
+    list_display = ('empleado', 'alcohol_ppm', 'valor_analogico', 'voltaje', 'fecha')
+    actions = ['ver_correlacion']
+
+    def ver_correlacion(self, request, queryset):
+        """Admin action: calcula y muestra la matriz de correlación de columnas numéricas.
+
+        Extrae también la `hora` y el `dia_semana` desde `fecha` para tener al menos 2 variables numéricas.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            messages.error(request, 'Pandas no está instalado. Ejecuta: pip install pandas')
+            return
+
+        # Extraer valores relevantes del queryset
+        qs = list(queryset.values('valor_analogico', 'voltaje', 'alcohol_ppm', 'fecha'))
+        if not qs:
+            messages.info(request, 'No se seleccionaron muestras.')
+            return
+
+        try:
+            df = pd.DataFrame.from_records(qs)
+            # Asegurar que 'fecha' sea datetime
+            df['fecha'] = pd.to_datetime(df['fecha'])
+            # Extraer hora y día de la semana (numéricos)
+            df['hora'] = df['fecha'].dt.hour
+            df['dia_semana'] = df['fecha'].dt.dayofweek
+
+            # Seleccionar columnas numéricas candidatas
+            numeric_cols = [c for c in ['valor_analogico', 'voltaje', 'alcohol_ppm', 'hora', 'dia_semana'] if c in df.columns]
+            df_num = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+
+            # Comprobar que hay al menos 2 variables numéricas
+            if df_num.dropna(axis=1, how='all').shape[1] < 2:
+                messages.info(request, 'No hay suficientes variables numéricas para calcular correlación.')
+                return
+
+            corr = df_num.corr()
+
+            # Renderizar tabla de correlación en una página simple del admin
+            html_table = corr.to_html(classes='table table-striped', float_format="%.4f")
+            context = self.admin_site.each_context(request)
+            context.update({
+                'title': 'Correlación - Muestras de Alcohol',
+                'correlation_table': html_table,
+                'selected_count': len(qs),
+            })
+            return render(request, 'admin/medidor/muestra_correlacion.html', context)
+
+        except Exception as e:
+            messages.error(request, f'Error calculando correlación: {e}')
+            return
+
+    ver_correlacion.short_description = 'Ver correlación entre variables (hora, ppm, ... )'
+
+admin.site.register(MuestraAlcohol, MuestraAdmin)
