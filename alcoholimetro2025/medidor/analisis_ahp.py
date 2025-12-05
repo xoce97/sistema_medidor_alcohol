@@ -293,7 +293,7 @@ class AnalizadorAHP:
         return df_export.to_csv(index=False, encoding='utf-8-sig')
 
     @staticmethod
-    def exportar_a_pdf(df, titulo='Análisis AHP de Riesgo de Alcohol'):
+    def exportar_a_pdf(df, titulo='Analisis AHP de Riesgo de Alcohol'):
         """
         Exporta DataFrame a PDF usando reportlab.
         
@@ -306,7 +306,7 @@ class AnalizadorAHP:
         """
         try:
             from io import BytesIO
-            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.lib.pagesizes import A4, landscape
             from reportlab.lib import colors
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -316,8 +316,8 @@ class AnalizadorAHP:
             # Crear buffer en memoria
             buffer = BytesIO()
             
-            # Crear documento PDF
-            doc = SimpleDocTemplate(buffer, pagesize=A4)
+            # Crear documento PDF (landscape para mejor ajuste de tabla)
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=0.5*inch, bottomMargin=0.5*inch)
             elementos = []
             
             # Estilos
@@ -325,23 +325,23 @@ class AnalizadorAHP:
             estilo_titulo = ParagraphStyle(
                 'Titulo',
                 parent=estilos['Heading1'],
-                fontSize=18,
+                fontSize=14,
                 textColor=colors.HexColor('#667eea'),
-                spaceAfter=12,
+                spaceAfter=6,
                 alignment=1
             )
             
             estilo_fecha = ParagraphStyle(
                 'Fecha',
                 parent=estilos['Normal'],
-                fontSize=10,
+                fontSize=9,
                 textColor=colors.grey,
-                spaceAfter=20,
+                spaceAfter=12,
                 alignment=1
             )
             
-            # Título
-            titulo_para = Paragraph(f"📊 {titulo}", estilo_titulo)
+            # Título (sin emojis)
+            titulo_para = Paragraph(titulo, estilo_titulo)
             elementos.append(titulo_para)
             
             # Fecha
@@ -349,34 +349,35 @@ class AnalizadorAHP:
             elementos.append(fecha_para)
             
             # Preparar datos para tabla
-            datos_tabla = [['Identificación', 'Nombre', 'Dpto.', 'Max PPM', 'Med. Pos.', 'Score (%)', 'Riesgo']]
+            datos_tabla = [['Identificacion', 'Nombre', 'Departamento', 'Max PPM', 'Med. Pos.', 'Score (%)', 'Riesgo']]
             
             for _, row in df.iterrows():
                 datos_tabla.append([
                     str(row['identificacion']),
-                    str(row['nombre']),
-                    str(row['departamento'])[:10],
+                    str(row['nombre'])[:20],
+                    str(row['departamento'])[:12],
                     f"{row['max_alcohol']:.2f}",
                     str(row['cantidad_positivos']),
-                    f"{row['ahp_score']:.2f}",
+                    f"{row['ahp_score']:.1f}",
                     str(row['nivel_riesgo'])
                 ])
             
-            # Crear tabla
-            tabla = Table(datos_tabla, colWidths=[1.2*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch])
+            # Crear tabla con ancho automático
+            tabla = Table(datos_tabla, colWidths=[1.0*inch, 1.2*inch, 1.2*inch, 0.7*inch, 0.7*inch, 0.7*inch, 0.7*inch])
             
             # Estilo tabla
             estilo_tabla = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (0, 0), (1, -1), 'LEFT'),  # Alinear nombre a la izquierda
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')])
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')])
             ])
             
             tabla.setStyle(estilo_tabla)

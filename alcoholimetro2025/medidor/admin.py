@@ -365,10 +365,15 @@ class EmpleadoAdmin(UserAdmin):
         """Exporta resultados AHP a CSV"""
         try:
             # Obtener parámetros de filtro
-            departamento = request.GET.get('departamento', '').strip() or None
-            fecha_inicio = request.GET.get('fecha_inicio', '').strip() or None
-            fecha_fin = request.GET.get('fecha_fin', '').strip() or None
+            departamento = request.GET.get('departamento', '').strip()
+            fecha_inicio = request.GET.get('fecha_inicio', '').strip()
+            fecha_fin = request.GET.get('fecha_fin', '').strip()
             orden = request.GET.get('orden', 'mayor')  # 'mayor' o 'menor'
+            
+            # Convertir strings 'None' o vacíos a None
+            departamento = departamento if departamento and departamento != 'None' else None
+            fecha_inicio = fecha_inicio if fecha_inicio and fecha_inicio != 'None' else None
+            fecha_fin = fecha_fin if fecha_fin and fecha_fin != 'None' else None
             
             # Ejecutar análisis
             analizador = AnalizadorAHP(pairwise_value=3.0)
@@ -398,10 +403,15 @@ class EmpleadoAdmin(UserAdmin):
         """Exporta resultados AHP a PDF"""
         try:
             # Obtener parámetros de filtro
-            departamento = request.GET.get('departamento', '').strip() or None
-            fecha_inicio = request.GET.get('fecha_inicio', '').strip() or None
-            fecha_fin = request.GET.get('fecha_fin', '').strip() or None
+            departamento = request.GET.get('departamento', '').strip()
+            fecha_inicio = request.GET.get('fecha_inicio', '').strip()
+            fecha_fin = request.GET.get('fecha_fin', '').strip()
             orden = request.GET.get('orden', 'mayor')  # 'mayor' o 'menor'
+            
+            # Convertir strings 'None' o vacíos a None
+            departamento = departamento if departamento and departamento != 'None' else None
+            fecha_inicio = fecha_inicio if fecha_inicio and fecha_inicio != 'None' else None
+            fecha_fin = fecha_fin if fecha_fin and fecha_fin != 'None' else None
             
             # Ejecutar análisis
             analizador = AnalizadorAHP(pairwise_value=3.0)
